@@ -1,0 +1,31 @@
+{
+  "name": "ani-cli-gui",
+  "version": "0.1.0",
+  "description": "Electron GUI for ani-cli: search, play (mpv/ffplay), download (ffmpeg)",
+  "main": "src/main/main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/scraper_test.js",
+    "test:live": "node --test test/live_smoke_test.js",
+    "build": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^44.9.0",
+    "electron-builder": "^26.15.3"
+  },
+  "author": "zy",
+  "build": {
+    "appId": "com.zy.ani-cli-gui",
+    "productName": "ani-cli GUI",
+    "files": [
+      "src/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "portable"
+    }
+  }
+}

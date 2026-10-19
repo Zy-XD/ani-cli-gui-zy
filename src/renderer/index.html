@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; img-src https: data:; style-src 'self'">
+  <title>ani-cli GUI</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <form id="search-form">
+      <input id="query" placeholder="Search anime…" autofocus>
+      <button class="primary-button">Search</button>
+    </form>
+    <select id="mode" title="Audio">
+      <option value="sub">Sub</option>
+      <option value="dub">Dub</option>
+    </select>
+    <select id="quality" title="Quality">
+      <option>best</option>
+      <option>1080p</option>
+      <option>720p</option>
+      <option>360p</option>
+    </select>
+    <button id="choose-dir-button" title="Change download folder">📁</button>
+    <button id="open-dir-button" title="Open download folder">Open</button>
+  </header>
+  <main>
+    <div id="results">
+      <div class="empty-message">Search for something to get started.</div>
+    </div>
+    <aside>
+      <h3 class="episodes-header">
+        <span id="anime-title">Episodes</span>
+        <button id="download-all-button" hidden>Download all</button>
+      </h3>
+      <div id="episodes"><div class="empty-message">Pick an anime.</div></div>
+      <div id="downloads"></div>
+    </aside>
+  </main>
+  <div id="status"></div>
+  <script type="module" src="renderer.js"></script>
+</body>
+</html>

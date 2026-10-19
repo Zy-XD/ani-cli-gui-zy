@@ -1,0 +1,202 @@
+:root {
+  --background: #111318;
+  --panel: #1a1d24;
+  --border: #2a2e38;
+  --text: #e6e6e6;
+  --muted: #8a90a0;
+  --accent: #7c9cff;
+  --error: #ff6b6b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font: 14px system-ui, sans-serif;
+  background: var(--background);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+
+input,
+select,
+button {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 10px;
+}
+
+/* Lets the search input and button sit directly in the header's flex row. */
+#search-form {
+  display: contents;
+}
+
+input {
+  flex: 1;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--accent);
+}
+
+.primary-button {
+  background: var(--accent);
+  color: #000;
+  border-color: var(--accent);
+}
+
+main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  min-height: 0;
+}
+
+/* Search results */
+
+#results {
+  overflow: auto;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+
+.anime-card {
+  cursor: pointer;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--panel);
+  border: 2px solid transparent;
+}
+
+.anime-card.selected,
+.anime-card:hover {
+  border-color: var(--accent);
+}
+
+.anime-card img {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  display: block;
+  background: var(--border);
+}
+
+.anime-card-info {
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.anime-card-info small {
+  color: var(--muted);
+  display: block;
+}
+
+/* Episodes */
+
+aside {
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.episodes-header {
+  margin: 0;
+  padding: 12px;
+  font-size: 15px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+#episodes {
+  flex: 1;
+  overflow: auto;
+}
+
+.episode {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.episode-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.episode button {
+  padding: 4px 8px;
+}
+
+/* Downloads */
+
+#downloads {
+  max-height: 40%;
+  overflow: auto;
+  border-top: 1px solid var(--border);
+}
+
+.download {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.download-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.download progress {
+  width: 100%;
+  height: 6px;
+}
+
+/* Status */
+
+#status {
+  padding: 6px 12px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  min-height: 30px;
+}
+
+#status.error,
+.download .error {
+  color: var(--error);
+}
+
+.empty-message {
+  color: var(--muted);
+  padding: 12px;
+}
