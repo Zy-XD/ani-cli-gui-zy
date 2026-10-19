@@ -1,6 +1,6 @@
 # ani-cli GUI
 
-A desktop app (Electron) for [ani-cli](https://github.com/pystardust/ani-cli). It's a Node port of ani-cli 5.1.5's hianime scraper, so you don't need ani-cli, bash or fzf.
+An unofficial desktop app (Electron) for [ani-cli](https://github.com/pystardust/ani-cli). It's a Node port of ani-cli 5.1.5's hianime scraper, so you don't need ani-cli, bash or fzf.
 
 ## Features
 
@@ -76,8 +76,10 @@ The scraper copies ani-cli's `hianime_*` functions. If search or playback stops 
 
 ## License
 
-MIT
+[GPL-3.0](LICENSE). The scraper in `src/scraper/` is a port of [ani-cli](https://github.com/pystardust/ani-cli), which is GPL-3.0, so this project uses the same license.
 
 ## Disclaimer
+
+This project is not affiliated with or endorsed by ani-cli, hianime or any streaming site. It doesn't host, store or distribute any content. Like a web browser, it only requests what third-party sites already make public. The developer doesn't control that content and isn't responsible for how it's used. Check whether streaming or downloading it is legal where you live, and use this app at your own risk. If you hold rights to content these sites serve, contact the site that hosts it.
 
 This is a CS student's personal project, built with help from AI tools. Don't expect maintenance, updates or support. If the site changes and the app breaks, it may stay broken. You're welcome to fork it and fix it yourself.

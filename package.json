@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Electron GUI for ani-cli: search, play (mpv/ffplay), download (ffmpeg)",
   "main": "src/main/main.js",
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "scripts": {
     "start": "electron .",
     "test": "node --test test/scraper_test.js",
