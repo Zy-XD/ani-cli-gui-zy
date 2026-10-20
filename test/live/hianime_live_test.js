@@ -5,7 +5,7 @@
 
 const assert = require('node:assert');
 const {test} = require('node:test');
-const {search, getEpisodes, getStreamLinks} = require('../src/scraper/hianime');
+const {search, getEpisodes, getStreamLinks} = require('../../src/sources/hianime/hianime');
 
 const QUERY = process.argv.slice(2).find((arg) => !arg.startsWith('-')) || 'frieren';
 

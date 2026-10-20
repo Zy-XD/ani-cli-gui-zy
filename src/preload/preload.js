@@ -1,9 +1,10 @@
 /**
  * @fileoverview Preload script: the only bridge between the UI and Node.
  *
- * It exposes `window.aniApi`, a fixed set of functions that each call one IPC
- * channel (see src/main/ipc.js), instead of raw ipcRenderer access, so the page
- * can't send arbitrary messages to the main process.
+ * It exposes `window.aniApi` with the desktop-only features (external players,
+ * downloads, folders). The web app runs without it and hides those features.
+ * Each function calls one IPC channel (see src/main/ipc.js); the page gets no
+ * raw ipcRenderer access, so it can't send arbitrary messages to the main process.
  */
 
 const {contextBridge, ipcRenderer} = require('electron');
@@ -15,14 +16,22 @@ const {contextBridge, ipcRenderer} = require('electron');
  */
 const invoke = (channel) => (arg) => ipcRenderer.invoke(channel, arg);
 
+/**
+ * Makes a subscribe function for a main -> renderer event.
+ * Only the payload is passed on; the IPC event object stays in the preload.
+ * @param {string} channel
+ * @return {function(function(*))}
+ */
+const subscribe = (channel) => (callback) => {
+  ipcRenderer.on(channel, (event, payload) => callback(payload));
+};
+
 contextBridge.exposeInMainWorld('aniApi', {
-  /** (query) -> Promise<Anime[]> */
-  search: invoke('search'),
-  /** (animeId) -> Promise<Episode[]> */
-  getEpisodes: invoke('get-episodes'),
-  /** ({episodeId, mode, quality, title}) -> Promise<player name> */
-  play: invoke('play'),
-  /** ({episodeId, mode, quality, name}) -> Promise<job id> */
+  /** () -> Promise<url> of the app's own node. */
+  getEmbeddedNode: invoke('get-embedded-node'),
+  /** ({token, url, subtitleUrl, title, startAt}) -> Promise<player name> */
+  playExternal: invoke('play-external'),
+  /** ({apiBase, streamPath, folder, name}) -> Promise<job id> */
   download: invoke('download'),
   /** (jobId) -> Promise<void> */
   cancelDownload: invoke('cancel-download'),
@@ -30,15 +39,12 @@ contextBridge.exposeInMainWorld('aniApi', {
   getDownloadDir: invoke('get-download-dir'),
   /** () -> Promise<path>; opens a folder picker. */
   chooseDownloadDir: invoke('choose-download-dir'),
-  /** () -> Promise; opens the folder in Explorer. */
+  /** () -> Promise; opens the download folder in the file manager. */
   openDownloadDir: invoke('open-download-dir'),
-  /**
-   * Subscribes to download progress.
-   * @param {function({id: string, name: string, status: string, percent: number,
-   *     error: (string|undefined)})} callback
-   */
-  onDownloadUpdate: (callback) => {
-    // Only the payload is passed on; the IPC event object stays in the preload.
-    ipcRenderer.on('download-update', (event, update) => callback(update));
-  },
+  /** () -> Promise; opens the drop-in sources folder in the file manager. */
+  openSourcesDir: invoke('open-sources-dir'),
+  /** (callback({id, name, status, percent, error})) */
+  onDownloadUpdate: subscribe('download-update'),
+  /** (callback({token, position, duration})) while mpv plays. */
+  onPlaybackProgress: subscribe('playback-progress'),
 });

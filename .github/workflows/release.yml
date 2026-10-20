@@ -1,0 +1,30 @@
+# Pushing a version tag builds the Windows app and publishes a GitHub Release:
+#   git tag v0.2.0 && git push origin v0.2.0
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      # --publish never: the release is created below with gh, not by electron-builder.
+      - name: Build portable exe
+        run: npx electron-builder --win portable --publish never
+      - name: Publish release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/*.exe --title "$GITHUB_REF_NAME" --generate-notes

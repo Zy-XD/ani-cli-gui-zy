@@ -1,0 +1,55 @@
+# Tests every push and pull request. Pushes to main also deploy the web app
+# (dist-web/) to GitHub Pages.
+# One-time setup: repo Settings > Pages > Build and deployment > Source: "GitHub Actions".
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install
+        run: npm ci
+        env:
+          # Tests and the web build don't need Electron itself.
+          ELECTRON_SKIP_BINARY_DOWNLOAD: 1
+      - name: Test
+        run: npm test
+      - name: Build web app
+        run: npm run build:web
+      - name: Upload web app
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-web
+
+  deploy-pages:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # Don't cancel a deployment halfway when a newer push arrives.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

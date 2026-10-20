@@ -4,9 +4,9 @@
 
 const assert = require('node:assert');
 const {test} = require('node:test');
-const {decodeEmbedPayload, pickStream} = require('../src/scraper/hianime');
-const {decodeEntities, readAttribute} = require('../src/scraper/html');
-const {getPlaylistDuration, parseMasterPlaylist} = require('../src/scraper/playlist');
+const {decodeEmbedPayload, pickStream} = require('../src/sources/hianime/hianime');
+const {decodeEntities, readAttribute} = require('../src/sources/hianime/html');
+const {getPlaylistDuration, parseMasterPlaylist} = require('../src/sources/hianime/playlist');
 const {toSafeFileName} = require('../src/main/downloader');
 
 const MASTER_URL = 'https://cdn.example/p/abc/master.m3u8';

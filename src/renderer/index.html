@@ -2,17 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Nodes can live at any address, so connections and media are open; scripts are not.
+       hls.js runs its parser in a blob: worker. -->
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; img-src https: data:; style-src 'self'">
+        content="default-src 'self'; script-src 'self'; style-src 'self'; img-src * data: blob:;
+                 media-src * blob:; connect-src *; worker-src blob:">
+  <!-- Poster CDNs reject hotlinks from unknown sites; sending no referrer works everywhere. -->
+  <meta name="referrer" content="no-referrer">
   <title>ani-cli GUI</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header>
-    <form id="search-form">
-      <input id="query" placeholder="Search anime…" autofocus>
-      <button class="primary-button">Search</button>
-    </form>
+    <nav class="tabs">
+      <button class="tab" data-view="browse">Browse</button>
+      <button class="tab" data-view="library">Library</button>
+      <button class="tab" data-view="sources">Sources</button>
+    </nav>
+    <span class="spacer"></span>
     <select id="mode" title="Audio">
       <option value="sub">Sub</option>
       <option value="dub">Dub</option>
@@ -23,23 +31,61 @@
       <option>720p</option>
       <option>360p</option>
     </select>
-    <button id="choose-dir-button" title="Change download folder">📁</button>
-    <button id="open-dir-button" title="Open download folder">Open</button>
+    <select id="player-choice" title="Player" data-desktop-only>
+      <option value="internal">Built-in player</option>
+      <option value="external">mpv</option>
+    </select>
+    <button id="choose-dir-button" title="Change download folder" data-desktop-only>📁</button>
+    <button id="open-dir-button" title="Open download folder" data-desktop-only>Open</button>
   </header>
+
   <main>
-    <div id="results">
-      <div class="empty-message">Search for something to get started.</div>
-    </div>
+    <section id="browse-view" class="view">
+      <form id="search-form" class="toolbar">
+        <select id="source-select" title="Source"></select>
+        <input id="query" placeholder="Search…" autofocus>
+        <button class="primary-button">Search</button>
+      </form>
+      <div id="results" class="card-grid">
+        <div class="empty-message">Pick a source and search. Local sources list everything on an empty search.</div>
+      </div>
+    </section>
+
+    <section id="library-view" class="view" hidden>
+      <div id="library" class="card-grid"></div>
+    </section>
+
+    <section id="sources-view" class="view" hidden>
+      <div id="sources" class="sources-page"></div>
+    </section>
+
     <aside>
       <h3 class="episodes-header">
         <span id="anime-title">Episodes</span>
-        <button id="download-all-button" hidden>Download all</button>
+        <span class="header-buttons">
+          <button id="save-button" hidden></button>
+          <button id="download-all-button" hidden>Download all</button>
+        </span>
       </h3>
-      <div id="episodes"><div class="empty-message">Pick an anime.</div></div>
+      <div id="episodes"><div class="empty-message">Pick a series.</div></div>
       <div id="downloads"></div>
     </aside>
   </main>
+
   <div id="status"></div>
+
+  <div id="player" hidden>
+    <div class="player-bar">
+      <span id="player-title"></span>
+      <span class="header-buttons">
+        <button id="player-next">Next episode ▶</button>
+        <button id="player-close">✕ Close</button>
+      </span>
+    </div>
+    <video id="player-video" controls autoplay crossorigin="anonymous"></video>
+  </div>
+
+  <script src="vendor/hls.min.js"></script>
   <script type="module" src="renderer.js"></script>
 </body>
 </html>

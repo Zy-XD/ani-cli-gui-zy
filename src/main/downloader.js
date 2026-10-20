@@ -1,9 +1,14 @@
 /**
- * @fileoverview Download queue: saves an episode as <name>.mp4 (+ <name>.vtt subtitles).
+ * @fileoverview Download queue: saves an episode as <folder>/<name>.mp4 (+ .vtt subtitles).
  *
- * The stream is HLS, so ffmpeg fetches the playlist and its segments and
- * remuxes them into an MP4 with `-c copy` (no re-encoding, so it's fast and
- * lossless). aria2 isn't used because it can't read HLS playlists.
+ * Episodes are fetched through a node (the app's own or a remote one): the job
+ * asks the node for the stream when it starts, then ffmpeg reads the node's
+ * proxied HLS playlist and remuxes it into an MP4 with `-c copy` (no
+ * re-encoding, so it's fast and lossless). aria2 isn't used because it can't
+ * read HLS playlists.
+ *
+ * Each series gets its own folder, which the "Local files" source reads as one
+ * series, so downloads can be played offline.
  *
  * Job lifecycle (each change is sent to the renderer as a DownloadUpdate):
  *
@@ -11,15 +16,13 @@
  *                 \             \
  *                  `-------------`-----> error | cancelled
  *
- * A job can be cancelled at any point before it finishes. Partial files of
+ * A job can be cancelled any time before it finishes. Partial files of
  * cancelled jobs are deleted.
  */
 
 const fs = require('fs');
 const path = require('path');
-const {USER_AGENT, buildHeaders} = require('../scraper/http');
-const {getStreamLinks, pickStream} = require('../scraper/hianime');
-const {getPlaylistDuration} = require('../scraper/playlist');
+const {getPlaylistDuration} = require('../sources/hianime/playlist');
 const {launchProcess} = require('./process');
 
 /** Statuses a job never leaves. */
@@ -27,10 +30,11 @@ const FINISHED_STATUSES = new Set(['done', 'error', 'cancelled']);
 
 /**
  * What the renderer asks to download.
- * @typedef {{episodeId: string, mode: string, quality: string, name: string}}
- * - mode: 'sub' or 'dub'.
- * - quality: e.g. '720p' or 'best'.
- * - name: file name without extension; unsafe characters are replaced.
+ * @typedef {{apiBase: string, streamPath: string, folder: string, name: string}}
+ * - apiBase: the node's API root, ending in '/api/'.
+ * - streamPath: stream request relative to apiBase, e.g. 'sources/hianime/stream?...'.
+ * - folder: series title, used as the subfolder name.
+ * - name: file name without extension. Unsafe characters in folder and name are replaced.
  */
 let DownloadRequest;
 
@@ -94,6 +98,8 @@ class DownloadQueue {
     // ponytail: one download at a time; parallel workers if bandwidth is left idle.
     /** @private {!Promise<void>} Resolves when the last queued job finishes. */
     this.tail_ = Promise.resolve();
+    /** @private {number} Makes ids unique when many jobs are added at once. */
+    this.nextId_ = 1;
   }
 
   /**
@@ -103,7 +109,7 @@ class DownloadQueue {
    */
   enqueue(request) {
     const job = {
-      id: `${request.episodeId}-${request.mode}-${Date.now()}`,
+      id: String(this.nextId_++),
       name: toSafeFileName(request.name),
       status: 'queued',
       percent: 0,
@@ -143,7 +149,7 @@ class DownloadQueue {
   }
 
   /**
-   * Downloads one job. The stream is resolved only now, because stream URLs
+   * Downloads one job. The stream is requested only now, because stream URLs
    * expire and the job may have waited in the queue.
    * Never rejects: failures are reported as status 'error'.
    * @param {!DownloadJob} job
@@ -153,20 +159,23 @@ class DownloadQueue {
   async run_(job) {
     if (job.status === 'cancelled') return;
     this.update_(job, {status: 'resolving'});
-    const outputDir = this.getDownloadDir_();
+    const outputDir = path.join(this.getDownloadDir_(), toSafeFileName(job.request.folder));
     const basePath = path.join(outputDir, job.name);
     try {
-      const {episodeId, mode, quality} = job.request;
-      const links = await getStreamLinks(episodeId, mode);
-      const {url} = pickStream(links.streams, quality);
+      const {apiBase, streamPath} = job.request;
+      const stream = await fetchJson(new URL(streamPath, apiBase));
+      if (stream.type !== 'hls') throw new Error('This source can\'t be downloaded');
+      const url = new URL(stream.url, apiBase).href;
       fs.mkdirSync(outputDir, {recursive: true});
-      if (links.subtitleUrl) await downloadFile(links.subtitleUrl, links.referer, `${basePath}.vtt`);
+      if (stream.subtitleUrl) {
+        await downloadFile(new URL(stream.subtitleUrl, apiBase).href, `${basePath}.vtt`);
+      }
       // ffmpeg doesn't know the total length up front; the playlist does.
-      const totalSeconds = getPlaylistDuration(await fetchWithReferer(url, links.referer));
-      // The user may have cancelled while the links were resolving.
+      const totalSeconds = getPlaylistDuration(await (await fetch(url)).text());
+      // The user may have cancelled while the stream was resolving.
       if (job.status === 'cancelled') return removeFiles(basePath);
 
-      const exitCode = await this.runFfmpeg_(job, url, links.referer, `${basePath}.mp4`, totalSeconds);
+      const exitCode = await this.runFfmpeg_(job, url, `${basePath}.mp4`, totalSeconds);
       if (job.status === 'cancelled') {
         removeFiles(basePath);
       } else if (exitCode === 0) {
@@ -186,20 +195,17 @@ class DownloadQueue {
    * playlist length gives the percentage.
    *
    * @param {!DownloadJob} job
-   * @param {string} url Variant playlist.
-   * @param {string} referer
+   * @param {string} url Proxied media playlist.
    * @param {string} outputPath .mp4 path; overwritten if it exists.
    * @param {number} totalSeconds Playlist length; 0 when unknown (no progress shown).
    * @return {!Promise<number>} ffmpeg exit code (non-zero only when cancelled).
    * @throws {Error} With ffmpeg's last error line if it fails on its own.
    * @private
    */
-  async runFfmpeg_(job, url, referer, outputPath, totalSeconds) {
+  async runFfmpeg_(job, url, outputPath, totalSeconds) {
     const child = await launchProcess('ffmpeg', [
       '-y', '-nostdin', '-loglevel', 'error',
-      '-extension_picky', '0', // Segments are named .ts.jpg; see player.js.
-      '-user_agent', USER_AGENT,
-      '-referer', referer,
+      '-extension_picky', '0', // Proxied segment URLs have no extension; see player.js.
       '-i', url,
       '-c', 'copy',
       '-progress', 'pipe:1',
@@ -231,25 +237,26 @@ class DownloadQueue {
 }
 
 /**
- * Fetches a CDN URL (which needs the referer) as text.
- * @param {string} url
- * @param {string} referer
- * @return {!Promise<string>}
+ * @param {!URL} url
+ * @return {!Promise<*>}
+ * @throws {Error} With the node's error message on failure.
  */
-async function fetchWithReferer(url, referer) {
-  return (await fetch(url, {headers: buildHeaders(referer)})).text();
+async function fetchJson(url) {
+  const response = await fetch(url);
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error || `HTTP ${response.status}`);
+  return body;
 }
 
 /**
  * Saves a URL to disk. Best effort: an HTTP error is ignored, since a missing
  * subtitle file shouldn't fail the whole download.
  * @param {string} url
- * @param {string} referer
  * @param {string} outputPath
  * @return {!Promise<void>}
  */
-async function downloadFile(url, referer, outputPath) {
-  const response = await fetch(url, {headers: buildHeaders(referer)});
+async function downloadFile(url, outputPath) {
+  const response = await fetch(url);
   if (response.ok) fs.writeFileSync(outputPath, Buffer.from(await response.arrayBuffer()));
 }
 
