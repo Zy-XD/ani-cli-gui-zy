@@ -9,6 +9,9 @@ const hianimeSource = require('./hianime');
 const {createLocalSource} = require('./local/local_source');
 const {validateSource} = require('./source');
 
+/** Scrapers that ship with the repo, loaded like drop-in sources. */
+const BUNDLED_DIR = path.join(__dirname, '..', '..', 'scrapers');
+
 /**
  * @param {{getLocalDir: function(): string, extensionsDir: (string|undefined)}} options
  *     - getLocalDir: folder for the "Local files" source.
@@ -17,7 +20,7 @@ const {validateSource} = require('./source');
  */
 function loadSources({getLocalDir, extensionsDir}) {
   const sources = [hianimeSource, createLocalSource(getLocalDir)];
-  for (const source of loadExtensions(extensionsDir)) {
+  for (const source of [...loadExtensions(BUNDLED_DIR), ...loadExtensions(extensionsDir)]) {
     if (sources.some((existing) => existing.id === source.id)) {
       console.warn(`Skipping source "${source.id}": the id is already taken`);
     } else {

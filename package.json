@@ -23,7 +23,8 @@
     "appId": "com.zy.ani-cli-gui",
     "productName": "ani-cli GUI",
     "files": [
-      "src/**/*"
+      "src/**/*",
+      "scrapers/**/*"
     ],
     "directories": {
       "output": "dist"

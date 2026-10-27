@@ -54,10 +54,14 @@ let Stream;
  *   search: function(string): !Promise<!Array<!Anime>>,
  *   getEpisodes: function(string): !Promise<!Array<!Episode>>,
  *   getStream: function(string, {mode: string, quality: string}): !Promise<!Stream>,
+ *   transform: (function(string, string, string): (string|!Promise<string>)|undefined),
  * }}
  * - id: unique within a node; lowercase letters, digits and dashes.
  * - modes: audio options the user can pick, e.g. ['sub', 'dub']. Omit if none.
  * - downloadable: true if the app should offer downloads (sensible for 'hls'/'http').
+ * - transform(body, url, kind): optional; the proxy passes it every HLS playlist
+ *   (kind '') and the subtitle file (kind 'sub') of this source's streams, and
+ *   serves what it returns: a plain playlist, or WebVTT for subtitles.
  */
 let Source;
 

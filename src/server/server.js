@@ -64,7 +64,7 @@ function createNodeServer({name, sources, staticDir}) {
     if (action === 'episodes') return source.getEpisodes(query.get('animeId') || '');
     if (action === 'stream') {
       const options = {mode: query.get('mode') || 'sub', quality: query.get('quality') || 'best'};
-      return toClientStream(await source.getStream(query.get('episodeId') || '', options));
+      return toClientStream(await source.getStream(query.get('episodeId') || '', options), source);
     }
     throw Object.assign(new Error(`Unknown action "${action}"`), {status: 404});
   };
@@ -76,7 +76,7 @@ function createNodeServer({name, sources, staticDir}) {
 
     const url = new URL(request.url, 'http://node');
     try {
-      if (url.pathname === '/api/proxy') return await handleProxy(url.searchParams, request, response);
+      if (url.pathname === '/api/proxy') return await handleProxy(url.searchParams, request, response, sourcesById);
       if (url.pathname === '/api/file') return handleFile(url.searchParams, request, response);
       if (url.pathname === '/api/info') {
         return sendJson(response, {name, version, sources: sources.map(describeSource)});

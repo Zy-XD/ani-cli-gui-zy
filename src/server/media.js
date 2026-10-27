@@ -26,10 +26,12 @@ const MIME_TYPES = {
  * Relative URL (from /api/...) that proxies `url`.
  * @param {string} url
  * @param {string=} referer
- * @return {string} e.g. 'proxy?u=...&r=...&s=...'.
+ * @param {string=} via Id of a source whose transform() rewrites the playlists, or ''.
+ * @param {string=} kind 'sub' if this is a subtitle track (also passed to transform()).
+ * @return {string} e.g. 'proxy?u=...&r=...&x=...&k=...&s=...'.
  */
-function proxyPath(url, referer = '') {
-  return `proxy?${signParams({u: url, r: referer})}`;
+function proxyPath(url, referer = '', via = '', kind = '') {
+  return `proxy?${signParams({u: url, r: referer, x: via, k: kind})}`;
 }
 
 /**
@@ -44,10 +46,12 @@ function filePathFor(absolutePath) {
 /**
  * Converts a source's Stream into client URLs, relative to the node's /api/ path.
  * @param {!import('../sources/source').Stream} stream
+ * @param {!import('../sources/source').Source=} source Its transform(), if any, is applied by the proxy.
  * @return {{type: string, url: string, subtitleUrl: ?string}}
  *     type is 'hls' or 'file' (a plain video the browser can play directly).
  */
-function toClientStream(stream) {
+function toClientStream(stream, source) {
+  const via = source?.transform ? source.id : '';
   if (stream.type === 'file') {
     return {
       type: 'file',
@@ -58,8 +62,8 @@ function toClientStream(stream) {
   if (stream.type === 'hls' || stream.type === 'http') {
     return {
       type: stream.type === 'hls' ? 'hls' : 'file',
-      url: proxyPath(stream.url, stream.referer),
-      subtitleUrl: stream.subtitleUrl ? proxyPath(stream.subtitleUrl, stream.referer) : null,
+      url: proxyPath(stream.url, stream.referer, via),
+      subtitleUrl: stream.subtitleUrl ? proxyPath(stream.subtitleUrl, stream.referer, via, 'sub') : null,
     };
   }
   throw new Error(`Unknown stream type "${stream.type}"`);
@@ -72,10 +76,11 @@ function toClientStream(stream) {
  * @param {string} playlist
  * @param {string} playlistUrl Upstream URL, to resolve relative URIs.
  * @param {string} referer
+ * @param {string=} via Passed on, so child playlists get the same transform.
  * @return {string}
  */
-function rewritePlaylist(playlist, playlistUrl, referer) {
-  const toProxy = (uri) => proxyPath(new URL(uri, playlistUrl).href, referer);
+function rewritePlaylist(playlist, playlistUrl, referer, via = '') {
+  const toProxy = (uri) => proxyPath(new URL(uri, playlistUrl).href, referer, via);
   return playlist.split(/\r?\n/).map((line) => {
     if (!line.trim()) return line;
     if (line.startsWith('#')) return line.replace(/URI="([^"]+)"/g, (match, uri) => `URI="${toProxy(uri)}"`);
@@ -88,10 +93,11 @@ function rewritePlaylist(playlist, playlistUrl, referer) {
  * @param {!URLSearchParams} query
  * @param {!import('http').IncomingMessage} request
  * @param {!import('http').ServerResponse} response
+ * @param {!Map<string, !import('../sources/source').Source>} sourcesById For transform().
  * @return {!Promise<void>}
  */
-async function handleProxy(query, request, response) {
-  const params = verifyParams(query, ['u', 'r']);
+async function handleProxy(query, request, response, sourcesById) {
+  const params = verifyParams(query, ['u', 'r', 'x', 'k']);
   if (!params) return sendError(response, 403, 'Bad signature');
   const headers = {'User-Agent': USER_AGENT};
   if (params.r) headers['Referer'] = params.r;
@@ -100,10 +106,16 @@ async function handleProxy(query, request, response) {
   const upstream = await fetch(params.u, {headers});
   const type = upstream.headers.get('content-type') || '';
   const isPlaylist = /mpegurl/i.test(type) || /\.m3u8(\?|$)/i.test(new URL(params.u).pathname);
-  if (isPlaylist && upstream.ok) {
-    const body = rewritePlaylist(await upstream.text(), params.u, params.r);
+  const transform = sourcesById.get(params.x)?.transform;
+  if (upstream.ok && (isPlaylist || (transform && params.k === 'sub'))) {
+    let body = await upstream.text();
+    if (transform) body = await transform(body, params.u, params.k);
+    if (!isPlaylist) {
+      response.writeHead(200, {'Content-Type': 'text/vtt; charset=utf-8'});
+      return void response.end(body);
+    }
     response.writeHead(200, {'Content-Type': 'application/vnd.apple.mpegurl'});
-    return void response.end(body);
+    return void response.end(rewritePlaylist(body, params.u, params.r, params.x));
   }
   const forwarded = {};
   for (const name of FORWARDED_HEADERS) {

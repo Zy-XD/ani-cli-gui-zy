@@ -65,7 +65,9 @@ module.exports = {
 Notes:
 
 - `id` values must stay the same between runs. The library stores them to remember saved series and watch progress.
-- Subtitles must be WebVTT (`.vtt`).
+- Subtitles must be WebVTT (`.vtt`), unless the source converts them in `transform`.
+- `transform(body, url, kind)` is optional. The node's proxy passes it each HLS playlist (`kind` is `''`) and the subtitle file (`kind` is `'sub'`) of this source's streams, and serves what it returns. Use it for sites that encode their playlists or only have ASS/SRT subtitles.
+- Bundled sources live in the repo's [`scrapers/`](../scrapers) folder and load on every node.
 - Throw an `Error` with a readable message when something fails; the UI shows it.
 - A broken file is skipped with a warning in the node's console. It doesn't stop the node.
 - Drop-in sources run with full access to the computer, like any program. Only install files you trust.
