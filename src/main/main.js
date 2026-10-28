@@ -16,6 +16,7 @@ const {loadSources} = require('../sources/registry');
 const {createNodeServer} = require('../server/server');
 const {registerIpcHandlers} = require('./ipc');
 const {loadSettings} = require('./settings');
+const {checkForUpdate} = require('./update_check');
 
 /**
  * Starts the embedded node on a free port, reachable from this computer only.
@@ -51,6 +52,7 @@ app.whenReady().then(async () => {
   });
   registerIpcHandlers(window, settings, {nodeUrl, sourcesDir});
   window.loadFile(path.join(__dirname, '../renderer/index.html'));
+  window.webContents.once('did-finish-load', () => checkForUpdate(window));
 });
 
 // One window only, so closing it quits the app on every platform (macOS included).

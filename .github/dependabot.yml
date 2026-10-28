@@ -1,0 +1,20 @@
+# One PR a month per ecosystem, with every update grouped, so upkeep is a
+# single click once CI is green. Security fixes still come right away when
+# "Dependabot security updates" is on (Settings > Code security).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      all:
+        patterns: ['*']
+  # Keeps the SHA-pinned actions in .github/workflows current.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      all:
+        patterns: ['*']

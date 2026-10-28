@@ -71,3 +71,12 @@ test('toSafeFileName never points outside the download folder', () => {
   assert.strictEqual(toSafeFileName('nul.txt'), '_nul.txt');
   assert.strictEqual(toSafeFileName('a\nb'), 'a_b');
 });
+
+test('isNewer compares release tags with the app version', () => {
+  const {isNewer} = require('../src/main/update_check');
+  assert.strictEqual(isNewer('v0.3.0', '0.2.9'), true);
+  assert.strictEqual(isNewer('v1.0.0', '0.10.0'), true);
+  assert.strictEqual(isNewer('v0.2.0', '0.2.0'), false);
+  assert.strictEqual(isNewer('v0.1.9', '0.2.0'), false);
+  assert.strictEqual(isNewer('v0.10.0', '0.9.0'), true);
+});

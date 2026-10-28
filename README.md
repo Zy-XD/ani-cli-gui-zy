@@ -71,6 +71,9 @@ npm run build:web  # static web app in dist-web/
   git push origin v0.2.0
   ```
 
+  The tag sets the app's version. On start, the desktop app checks the latest release and offers to open its page if it's newer.
+- [`dependabot.yml`](.github/dependabot.yml) opens at most one grouped PR a month each for npm packages and for the workflow actions (pinned to commit SHAs). Merge it once CI passes, then tag a release so the app picks up the fixes. For security fixes between those, turn on **Settings → Code security → Dependabot alerts** and **Dependabot security updates**.
+
 ## Project layout
 
 ```
