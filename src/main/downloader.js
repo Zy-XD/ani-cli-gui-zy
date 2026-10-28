@@ -68,12 +68,17 @@ let DownloadUpdate;
 let DownloadJob;
 
 /**
- * Replaces characters Windows forbids in file names (the same set ani-cli replaces).
+ * Makes a title safe as one file or folder name inside the download folder:
+ * replaces characters Windows forbids (the same set ani-cli replaces) and
+ * control characters, trims trailing dots and spaces (Windows drops them), and
+ * renames '', '.', '..' and reserved device names (CON, NUL, COM1, ...), so a
+ * title from a source can never point outside its folder.
  * @param {string} name
  * @return {string}
  */
 function toSafeFileName(name) {
-  return name.replace(/[<>:"/\\|?*]/g, '_');
+  const safe = String(name).replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').replace(/[. ]+$/, '');
+  return !safe || /^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$/i.test(safe) ? `_${safe}` : safe;
 }
 
 /**

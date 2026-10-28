@@ -24,17 +24,20 @@ Sources work much like [Aniyomi](https://github.com/aniyomiorg/aniyomi) extensio
 npm run serve
 ```
 
-Then either open <http://localhost:7777>, which serves the UI from the node itself, or open the hosted web app and add `http://localhost:7777` on the Sources page. Chrome may ask to allow access to devices on your local network; this is required for a site on the internet to reach a node on your computer.
+It prints its address, `http://localhost:7777/<key>/`. Either open that address, which serves the UI from the node itself, or open the hosted web app and add that address on the Sources page. Chrome may ask to allow access to devices on your local network; this is required for a site on the internet to reach a node on your computer.
+
+The key is a secret: every request without it gets a 404. Any website can send requests to `localhost`, so without the key, a page you visit could list and read the node's Local files. Share the address only with people who may use the node.
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `PORT` | `7777` | Port to listen on |
-| `HOST` | `127.0.0.1` | `0.0.0.0` shares the node on your network. Anyone who can reach it can use it, and there is no login. |
+| `HOST` | `127.0.0.1` | `0.0.0.0` shares the node on your network. Anyone with the address (including its key) can use it. |
 | `ANI_NODE_NAME` | computer name | Name shown in the UI |
+| `ANI_NODE_KEY` | random, saved in `~/.ani-cli-gui/node-key` | The secret in the node's address. Delete the file to get a new one. |
 | `ANI_LOCAL_DIR` | `~/Downloads/ani-cli` | Folder for the Local files source |
 | `ANI_SOURCES_DIR` | `~/.ani-cli-gui/sources` | Folder of drop-in sources |
 
-The desktop app's node uses the download folder for Local files. Its drop-in sources folder is opened with the **Open folder** button on the Sources page (`%APPDATA%\<app name>\sources` on Windows).
+The desktop app's node uses the download folder for Local files, and a new random key each time the app starts. Its drop-in sources folder is opened with the **Open folder** button on the Sources page (`%APPDATA%\<app name>\sources` on Windows).
 
 ## Writing a drop-in source
 

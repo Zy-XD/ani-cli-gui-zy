@@ -61,3 +61,13 @@ test('html helpers', () => {
 test('toSafeFileName replaces characters Windows forbids', () => {
   assert.strictEqual(toSafeFileName('Re:Zero <1/2>?'), 'Re_Zero _1_2__');
 });
+
+test('toSafeFileName never points outside the download folder', () => {
+  assert.strictEqual(toSafeFileName('..'), '_');
+  assert.strictEqual(toSafeFileName('.'), '_');
+  assert.strictEqual(toSafeFileName(''), '_');
+  assert.strictEqual(toSafeFileName('Season 2...'), 'Season 2');
+  assert.strictEqual(toSafeFileName('CON'), '_CON');
+  assert.strictEqual(toSafeFileName('nul.txt'), '_nul.txt');
+  assert.strictEqual(toSafeFileName('a\nb'), 'a_b');
+});

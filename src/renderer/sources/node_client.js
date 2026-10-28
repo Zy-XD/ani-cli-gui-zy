@@ -47,7 +47,7 @@ async function fetchJson(url) {
  * @param {{id: string, url: string}} node
  *     - id: stable id stored in source keys ('app' for the desktop app's own node,
  *       the URL for others).
- *     - url: base URL, e.g. 'http://localhost:7777'.
+ *     - url: base URL with the node's key, e.g. 'http://localhost:7777/<key>/'.
  * @return {!Promise<{name: string, sources: !Array<!ClientSource>}>}
  */
 export async function connectToNode({id, url}) {

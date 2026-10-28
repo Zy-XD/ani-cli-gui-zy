@@ -21,10 +21,10 @@ GitHub Pages can only host static files. hianime needs a server, because browser
 npm run serve
 ```
 
-This starts a node on http://localhost:7777. Then either:
+This starts a node and prints its address, `http://localhost:7777/<key>/`. The key is a secret that stops other websites from using the node. Then either:
 
-- open <http://localhost:7777>, which serves the UI from the node itself, or
-- open the GitHub Pages site and add `http://localhost:7777` on the **Sources** page.
+- open that address, which serves the UI from the node itself, or
+- open the GitHub Pages site and add that address on the **Sources** page.
 
 Without a node, the web app can still play videos from a folder on your device (**Files on this device**). Your library is stored in each browser's local storage, so it isn't shared between the app and browsers.
 
@@ -54,7 +54,7 @@ You need Node.js 22.12+, and `ffmpeg` (plus ideally `mpv`) on PATH.
 ```bash
 npm ci             # also copies hls.js into src/renderer/vendor
 npm start          # desktop app in dev mode
-npm run serve      # standalone node + web UI on http://localhost:7777
+npm run serve      # standalone node + web UI on http://localhost:7777/<key>/
 npm test           # offline tests
 npm run test:live  # live check against hianime
 npm run build      # portable .exe in dist/

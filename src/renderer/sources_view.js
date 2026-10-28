@@ -24,7 +24,7 @@ const sourcesElement = document.getElementById('sources');
  */
 export function renderSourcesPage(options) {
   const {nodes, pickedFileCount, isDesktop} = options;
-  const addInput = createElement('input', {placeholder: 'http://localhost:7777', type: 'url', required: true});
+  const addInput = createElement('input', {placeholder: 'http://localhost:7777/<key>/', type: 'url', required: true});
   const addForm = createElement('form', {className: 'toolbar'},
       addInput, createElement('button', {className: 'primary-button', textContent: 'Add node'}));
   addForm.onsubmit = (event) => {

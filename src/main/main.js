@@ -10,6 +10,7 @@
  */
 
 const {app, BrowserWindow} = require('electron');
+const crypto = require('crypto');
 const path = require('path');
 const {loadSources} = require('../sources/registry');
 const {createNodeServer} = require('../server/server');
@@ -18,17 +19,19 @@ const {loadSettings} = require('./settings');
 
 /**
  * Starts the embedded node on a free port, reachable from this computer only.
- * Its "Local files" source reads the download folder.
+ * Its "Local files" source reads the download folder. The key is new each run
+ * and only the app's window learns it, so websites can't use the node.
  * @param {!import('./settings').Settings} settings
  * @param {string} sourcesDir
- * @return {!Promise<string>} The node's URL.
+ * @return {!Promise<string>} The node's URL, including its key.
  */
 function startEmbeddedNode(settings, sourcesDir) {
   const sources = loadSources({getLocalDir: () => settings.downloadDir, extensionsDir: sourcesDir});
-  const server = createNodeServer({name: 'This computer', sources});
+  const key = crypto.randomBytes(24).toString('base64url');
+  const server = createNodeServer({name: 'This computer', sources, key});
   return new Promise((resolve, reject) => {
     server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => resolve(`http://127.0.0.1:${server.address().port}`));
+    server.listen(0, '127.0.0.1', () => resolve(`http://127.0.0.1:${server.address().port}/${key}`));
   });
 }
 

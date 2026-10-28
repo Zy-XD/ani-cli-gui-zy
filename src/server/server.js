@@ -12,6 +12,10 @@
  *   GET /api/file?p=&s=                             -> file bytes, with Range support
  *   Anything else                                   -> the web UI, if `staticDir` is set
  *
+ * Every path above sits under a secret key: http://host:port/<key>/api/info.
+ * CORS is open (any origin), so the key is what stops other websites from
+ * using a node on localhost to list and read its files.
+ *
  * The Electron app starts one on 127.0.0.1 (see src/main/main.js);
  * `npm run serve` starts a standalone one (see cli.js).
  */
@@ -42,12 +46,16 @@ const STATIC_TYPES = {
  *   name: string,
  *   sources: !Array<!import('../sources/source').Source>,
  *   staticDir: (string|undefined),
+ *   key: string,
  * }} options
  *   - name: shown in the UI's source list.
- *   - staticDir: folder of the web UI to serve at '/'.
+ *   - staticDir: folder of the web UI to serve at '/<key>/'.
+ *   - key: secret first path segment; requests without it get a 404.
  * @return {!http.Server} Not listening yet; call listen().
  */
-function createNodeServer({name, sources, staticDir}) {
+function createNodeServer({name, sources, staticDir, key}) {
+  if (!key || !/^[\w-]{16,}$/.test(key)) throw new Error('A node needs a key of 16+ letters, digits, - or _');
+  const prefix = `/${key}`;
   const sourcesById = new Map(sources.map((source) => [source.id, source]));
 
   /**
@@ -75,19 +83,25 @@ function createNodeServer({name, sources, staticDir}) {
     if (request.method !== 'GET' && request.method !== 'HEAD') return sendError(response, 405, 'GET only');
 
     const url = new URL(request.url, 'http://node');
+    // The UI loads relative paths, so '/<key>' needs its trailing slash.
+    if (url.pathname === prefix && staticDir) {
+      return void response.writeHead(302, {Location: `${prefix}/`}).end();
+    }
+    if (!url.pathname.startsWith(`${prefix}/`)) return sendError(response, 404, 'Not found');
+    const pathname = url.pathname.slice(prefix.length);
     try {
-      if (url.pathname === '/api/proxy') return await handleProxy(url.searchParams, request, response, sourcesById);
-      if (url.pathname === '/api/file') return handleFile(url.searchParams, request, response);
-      if (url.pathname === '/api/info') {
+      if (pathname === '/api/proxy') return await handleProxy(url.searchParams, request, response, sourcesById);
+      if (pathname === '/api/file') return handleFile(url.searchParams, request, response);
+      if (pathname === '/api/info') {
         return sendJson(response, {name, version, sources: sources.map(describeSource)});
       }
-      const action = url.pathname.match(/^\/api\/sources\/([^/]+)\/([a-z]+)$/);
+      const action = pathname.match(/^\/api\/sources\/([^/]+)\/([a-z]+)$/);
       if (action) {
         const sourceId = decodeURIComponent(action[1]);
         return sendJson(response, await handleSourceAction(sourceId, action[2], url.searchParams));
       }
-      if (url.pathname.startsWith('/api/')) return sendError(response, 404, 'Not found');
-      if (staticDir) return serveStatic(staticDir, url.pathname, response);
+      if (pathname.startsWith('/api/')) return sendError(response, 404, 'Not found');
+      if (staticDir) return serveStatic(staticDir, pathname, response);
       sendError(response, 404, 'Not found');
     } catch (error) {
       if (response.headersSent) return void response.destroy();

@@ -32,7 +32,7 @@ const {saveSettings} = require('./settings');
  * @param {!import('./settings').Settings} settings Live settings object; changed
  *     here when the user picks a new download folder.
  * @param {{nodeUrl: string, sourcesDir: string}} paths
- *     - nodeUrl: the embedded node, e.g. 'http://127.0.0.1:51234'.
+ *     - nodeUrl: the embedded node with its key, e.g. 'http://127.0.0.1:51234/<key>'.
  *     - sourcesDir: folder of drop-in sources for the embedded node.
  */
 function registerIpcHandlers(window, settings, {nodeUrl, sourcesDir}) {

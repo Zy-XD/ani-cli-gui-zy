@@ -66,10 +66,16 @@ test('signed params verify, and tampering is rejected', () => {
 test('node API serves info, search, stream and files', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ani-node-'));
   fs.writeFileSync(path.join(root, 'Clip Episode 1.mp4'), '0123456789');
-  const server = createNodeServer({name: 'Test', sources: [createLocalSource(() => root)]});
+  const key = 'test-key-0123456789';
+  const server = createNodeServer({name: 'Test', sources: [createLocalSource(() => root)], key});
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const api = `http://127.0.0.1:${server.address().port}/api/`;
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  const api = `${origin}/${key}/api/`;
   try {
+    // Without the key (e.g. another website probing localhost), nothing is served.
+    assert.strictEqual((await fetch(`${origin}/api/sources/local/search?q=`)).status, 404);
+    assert.strictEqual((await fetch(`${origin}/wrong-key-0123456789/api/info`)).status, 404);
+
     const info = await (await fetch(`${api}info`)).json();
     assert.strictEqual(info.name, 'Test');
     assert.deepStrictEqual(info.sources.map((s) => s.id), ['local']);
@@ -98,8 +104,11 @@ test('the example drop-in source loads through the registry', async () => {
   fs.copyFileSync(path.join(__dirname, '..', 'docs', 'example_source.js'), path.join(dir, 'demo.js'));
   fs.writeFileSync(path.join(dir, 'broken.js'), 'module.exports = {id: "Bad Id"};');
   const sources = loadSources({getLocalDir: () => dir, extensionsDir: dir});
-  assert.deepStrictEqual(sources.map((source) => source.id), ['hianime', 'local', 'demo']);
-  const demo = sources[2];
+  // Bundled scrapers (scrapers/) load between the built-ins and the folder's files.
+  const ids = sources.map((source) => source.id);
+  assert.deepStrictEqual([...ids.slice(0, 2), ids.at(-1)], ['hianime', 'local', 'demo']);
+  assert.ok(!ids.includes('Bad Id'));
+  const demo = sources.at(-1);
   const [series] = await demo.search('bunny');
   const [episode] = await demo.getEpisodes(series.id);
   assert.strictEqual((await demo.getStream(episode.id)).type, 'hls');
