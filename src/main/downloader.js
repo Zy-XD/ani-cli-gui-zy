@@ -23,7 +23,7 @@
 const fs = require('fs');
 const path = require('path');
 const {getPlaylistDuration} = require('../sources/hianime/playlist');
-const {launchProcess} = require('./process');
+const {launchProcess, requireHttpUrl} = require('./process');
 
 /** Statuses a job never leaves. */
 const FINISHED_STATUSES = new Set(['done', 'error', 'cancelled']);
@@ -168,12 +168,12 @@ class DownloadQueue {
     const basePath = path.join(outputDir, job.name);
     try {
       const {apiBase, streamPath} = job.request;
-      const stream = await fetchJson(new URL(streamPath, apiBase));
+      const stream = await fetchJson(new URL(streamPath, requireHttpUrl(apiBase)));
       if (stream.type !== 'hls') throw new Error('This source can\'t be downloaded');
-      const url = new URL(stream.url, apiBase).href;
+      const url = requireHttpUrl(new URL(stream.url, apiBase).href);
       fs.mkdirSync(outputDir, {recursive: true});
       if (stream.subtitleUrl) {
-        await downloadFile(new URL(stream.subtitleUrl, apiBase).href, `${basePath}.vtt`);
+        await downloadFile(requireHttpUrl(new URL(stream.subtitleUrl, apiBase).href), `${basePath}.vtt`);
       }
       // ffmpeg doesn't know the total length up front; the playlist does.
       const totalSeconds = getPlaylistDuration(await (await fetch(url)).text());

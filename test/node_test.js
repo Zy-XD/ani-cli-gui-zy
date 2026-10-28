@@ -89,8 +89,14 @@ test('node API serves info, search, stream and files', async () => {
     assert.strictEqual(ranged.status, 206);
     assert.strictEqual(await ranged.text(), '234');
     assert.strictEqual(ranged.headers.get('access-control-allow-origin'), '*');
+    assert.strictEqual(ranged.headers.get('content-security-policy'), 'sandbox');
 
     assert.strictEqual((await fetch(`${api}proxy?u=https://example.com&r=&s=x`)).status, 403);
+    // Even a validly signed URL can't reach this computer or the LAN (a playlist could point there).
+    for (const target of [`${api}info`, 'http://192.168.1.1/', 'http://[::ffff:127.0.0.1]/', 'file:///etc/passwd']) {
+      const signed = signParams({u: target, r: '', x: '', k: ''});
+      assert.strictEqual((await fetch(`${api}proxy?${signed}`)).status, 403, target);
+    }
     assert.strictEqual((await fetch(`${api}sources/nope/search?q=a`)).status, 404);
   } finally {
     server.close();

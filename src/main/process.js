@@ -37,4 +37,21 @@ async function launchDetached(command, args) {
   child.unref();
 }
 
-module.exports = {launchProcess, launchDetached};
+/**
+ * Checks a URL before it goes to mpv, ffplay or ffmpeg. Streams always come from
+ * a node over http(s); a remote node could otherwise point the tools at
+ * file:// paths or their other protocols.
+ * @param {string} url
+ * @return {string} The URL, unchanged.
+ * @throws {Error} If it isn't an absolute http(s) URL.
+ */
+function requireHttpUrl(url) {
+  let protocol = '';
+  try {
+    protocol = new URL(url).protocol;
+  } catch {}
+  if (protocol !== 'http:' && protocol !== 'https:') throw new Error('Only http(s) stream URLs can be played');
+  return url;
+}
+
+module.exports = {launchProcess, launchDetached, requireHttpUrl};

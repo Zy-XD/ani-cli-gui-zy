@@ -80,3 +80,11 @@ test('isNewer compares release tags with the app version', () => {
   assert.strictEqual(isNewer('v0.1.9', '0.2.0'), false);
   assert.strictEqual(isNewer('v0.10.0', '0.9.0'), true);
 });
+
+test('requireHttpUrl only lets http(s) URLs reach mpv and ffmpeg', () => {
+  const {requireHttpUrl} = require('../src/main/process');
+  assert.strictEqual(requireHttpUrl('http://127.0.0.1:1/k/api/proxy?u=x'), 'http://127.0.0.1:1/k/api/proxy?u=x');
+  for (const url of ['file:///C:/secret.txt', 'C:\secret.txt', '--script=evil.lua', 'edl://x', '']) {
+    assert.throws(() => requireHttpUrl(url), /http/, url);
+  }
+});

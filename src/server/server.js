@@ -89,6 +89,12 @@ function createNodeServer({name, sources, staticDir, key}) {
     }
     if (!url.pathname.startsWith(`${prefix}/`)) return sendError(response, 404, 'Not found');
     const pathname = url.pathname.slice(prefix.length);
+    if (pathname.startsWith('/api/')) {
+      // Proxied bytes come from the streaming site. If someone opens one directly,
+      // it must not run as a page on this node's origin, where the web UI lives.
+      response.setHeader('X-Content-Type-Options', 'nosniff');
+      response.setHeader('Content-Security-Policy', 'sandbox');
+    }
     try {
       if (pathname === '/api/proxy') return await handleProxy(url.searchParams, request, response, sourcesById);
       if (pathname === '/api/file') return handleFile(url.searchParams, request, response);

@@ -74,6 +74,7 @@ Notes:
 - Throw an `Error` with a readable message when something fails; the UI shows it.
 - A broken file is skipped with a warning in the node's console. It doesn't stop the node.
 - Drop-in sources run with full access to the computer, like any program. Only install files you trust.
+- The node's proxy only fetches public internet addresses, redirects included. A stream on `localhost` or your LAN (e.g. a home media server) can't be proxied; return it as `{type: 'file', path}` instead if it's on the node's disk.
 
 ## The node's HTTP API
 

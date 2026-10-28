@@ -16,7 +16,7 @@ const crypto = require('crypto');
 const net = require('net');
 const os = require('os');
 const path = require('path');
-const {launchDetached} = require('./process');
+const {launchDetached, requireHttpUrl} = require('./process');
 
 /** How often mpv's position is passed on, in ms. */
 const PROGRESS_INTERVAL_MS = 5000;
@@ -38,6 +38,8 @@ let ExternalPlayRequest;
  * @throws {Error} If neither mpv nor ffplay is installed.
  */
 async function playExternally(request, onProgress) {
+  requireHttpUrl(request.url);
+  if (request.subtitleUrl) requireHttpUrl(request.subtitleUrl);
   const ipcPath = createIpcPath();
   try {
     await launchDetached('mpv', buildMpvArgs(request, ipcPath));

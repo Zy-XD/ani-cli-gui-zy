@@ -6,9 +6,16 @@
  * - /api/file streams a file from disk, with Range support for seeking.
  *
  * Both take signed parameters (see signed_urls.js).
+ *
+ * Playlists come from the streaming site, so it chooses what the proxy fetches
+ * next. To keep a hostile site from reaching your router or other services on
+ * this computer through the node, the proxy only fetches public addresses,
+ * redirects included.
  */
 
+const dns = require('dns');
 const fs = require('fs');
+const net = require('net');
 const path = require('path');
 const {Readable} = require('stream');
 const {USER_AGENT} = require('../sources/hianime/http');
@@ -16,6 +23,54 @@ const {signParams, verifyParams} = require('./signed_urls');
 
 /** Response headers worth passing on from the upstream server. */
 const FORWARDED_HEADERS = ['content-type', 'content-length', 'content-range', 'accept-ranges'];
+
+/**
+ * Loopback, private, link-local, carrier-grade NAT, multicast and reserved ranges.
+ * BlockList also matches the IPv4-mapped IPv6 forms of the IPv4 ranges.
+ * 198.18.0.0/15 is left out on purpose: "fake-IP" VPN and proxy clients answer DNS from it.
+ */
+const PRIVATE_ADDRESSES = new net.BlockList();
+for (const [address, prefix] of [['0.0.0.0', 8], ['10.0.0.0', 8], ['100.64.0.0', 10], ['127.0.0.0', 8],
+  ['169.254.0.0', 16], ['172.16.0.0', 12], ['192.0.0.0', 24], ['192.168.0.0', 16], ['224.0.0.0', 3]]) {
+  PRIVATE_ADDRESSES.addSubnet(address, prefix, 'ipv4');
+}
+for (const [address, prefix] of [['::', 127], ['fc00::', 7], ['fe80::', 10], ['ff00::', 8]]) {
+  PRIVATE_ADDRESSES.addSubnet(address, prefix, 'ipv6');
+}
+
+/**
+ * @param {string} address An IP address, as dns.lookup returns it.
+ * @return {boolean}
+ */
+function isPrivateAddress(address) {
+  return PRIVATE_ADDRESSES.check(address, net.isIPv4(address) ? 'ipv4' : 'ipv6');
+}
+
+/**
+ * fetch() that refuses non-http(s) URLs and private addresses, checking every redirect.
+ * ponytail: checks DNS before fetch() resolves it again, so a site that switches its
+ * DNS between the two (rebinding) gets through; pin the address with an undici
+ * dispatcher if that matters.
+ * @param {string} url
+ * @param {!Object<string, string>} headers
+ * @return {!Promise<!Response>}
+ * @throws {Error} With status 403 when the address isn't allowed.
+ */
+async function fetchPublic(url, headers) {
+  for (let hops = 0; hops < 5; hops++) {
+    const {protocol, hostname} = new URL(url);
+    const host = hostname.replace(/^\[|\]$/g, '');
+    const addresses = /^https?:$/.test(protocol) ? await dns.promises.lookup(host, {all: true}) : [];
+    if (!addresses.length || addresses.some(({address}) => isPrivateAddress(address))) {
+      throw Object.assign(new Error(`Not fetching ${host}: only public http(s) addresses are allowed`), {status: 403});
+    }
+    const response = await fetch(url, {headers, redirect: 'manual'});
+    const location = response.headers.get('location');
+    if (response.status < 300 || response.status > 399 || !location) return response;
+    url = new URL(location, url).href;
+  }
+  throw Object.assign(new Error('Too many redirects'), {status: 502});
+}
 
 const MIME_TYPES = {
   '.mp4': 'video/mp4', '.m4v': 'video/mp4', '.mkv': 'video/x-matroska', '.webm': 'video/webm',
@@ -103,7 +158,7 @@ async function handleProxy(query, request, response, sourcesById) {
   if (params.r) headers['Referer'] = params.r;
   if (request.headers.range) headers['Range'] = request.headers.range;
 
-  const upstream = await fetch(params.u, {headers});
+  const upstream = await fetchPublic(params.u, headers);
   const type = upstream.headers.get('content-type') || '';
   const isPlaylist = /mpegurl/i.test(type) || /\.m3u8(\?|$)/i.test(new URL(params.u).pathname);
   const transform = sourcesById.get(params.x)?.transform;
