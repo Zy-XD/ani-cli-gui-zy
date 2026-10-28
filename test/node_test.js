@@ -52,7 +52,7 @@ test('rewritePlaylist proxies segment lines and URI attributes', () => {
   const rewritten = rewritePlaylist(playlist, 'https://cdn.example/a/index.m3u8', 'https://ref.example/');
   const lines = rewritten.split('\n');
   assert.match(lines[1], /^#EXT-X-KEY:METHOD=AES-128,URI="proxy\?u=https%3A%2F%2Fcdn\.example%2Fa%2Fkey\.bin&r=/);
-  assert.match(lines[3], /^proxy\?u=https%3A%2F%2Fcdn\.example%2Fa%2Fseg1\.ts&r=https%3A%2F%2Fref\.example%2F&s=/);
+  assert.match(lines[3], /^proxy\?u=https%3A%2F%2Fcdn\.example%2Fa%2Fseg1\.ts&r=https%3A%2F%2Fref\.example%2F&x=&k=&s=/);
   assert.strictEqual(lines[2], '#EXTINF:4,');
 });
 
