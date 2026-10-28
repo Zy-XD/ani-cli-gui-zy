@@ -1,0 +1,25 @@
+# Turns on auto-merge for Dependabot PRs, so they merge by themselves once the
+# required CI "test" check passes. Major version bumps are left for a person:
+# CI can't open the app, and a new Electron major can change behaviour.
+# Needs, once: Settings > General > "Allow auto-merge", and a ruleset on main
+# that requires the "test" check (see README, CI/CD).
+name: Dependabot auto-merge
+
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  automerge:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - id: meta
+        uses: dependabot/fetch-metadata@21025c705c08248db411dc16f3619e6b5f9ea21a # v2.5.0
+      - if: steps.meta.outputs.update-type != 'version-update:semver-major'
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ github.token }}

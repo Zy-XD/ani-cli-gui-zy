@@ -72,7 +72,8 @@ npm run build:web  # static web app in dist-web/
   ```
 
   The tag sets the app's version. On start, the desktop app checks the latest release and offers to open its page if it's newer.
-- [`dependabot.yml`](.github/dependabot.yml) opens at most one grouped PR a month each for npm packages and for the workflow actions (pinned to commit SHAs). Merge it once CI passes, then tag a release so the app picks up the fixes. For security fixes between those, turn on **Settings → Code security → Dependabot alerts** and **Dependabot security updates**.
+- [`dependabot.yml`](.github/dependabot.yml) opens at most one grouped PR a month each for npm packages and for the workflow actions (pinned to commit SHAs). For security fixes between those, turn on **Settings → Code security → Dependabot alerts** and **Dependabot security updates**.
+- [`dependabot-automerge.yml`](.github/workflows/dependabot-automerge.yml) merges those PRs by itself once CI passes, except major version bumps, which wait for you. One-time setup: turn on **Settings → General → Allow auto-merge**, and add a ruleset (**Settings → Rules → Rulesets**) on the default branch with **Require status checks to pass** set to `test`, and **Repository admin** in its bypass list so you can still push to `main` directly. Merged updates reach the app when you next tag a release.
 
 ## Project layout
 
