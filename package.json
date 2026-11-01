@@ -14,9 +14,9 @@
     "build": "electron-builder --win portable"
   },
   "devDependencies": {
-    "electron": "^44.9.0",
-    "electron-builder": "^26.15.3",
-    "hls.js": "^1.7.3"
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0",
+    "hls.js": "^1.7.4"
   },
   "author": "zy",
   "build": {
